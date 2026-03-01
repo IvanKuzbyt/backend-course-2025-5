@@ -13,12 +13,13 @@ const options = program.opts();
 
 const cacheDir = options.cache;
 
+// створення директорії кешу якщо її немає
 if (!fs.existsSync(cacheDir)) {
   fs.mkdirSync(cacheDir, { recursive: true });
 }
 
 const server = http.createServer(async (req, res) => {
-  const code = req.url.slice(1);
+  const code = req.url.slice(1); // отримуємо код з URL
   const filePath = path.join(cacheDir, `${code}.jpg`);
 
   if (!code) {
@@ -28,12 +29,14 @@ const server = http.createServer(async (req, res) => {
 
   try {
 
+    // GET
     if (req.method === 'GET') {
       const data = await fs.promises.readFile(filePath);
       res.writeHead(200, { 'Content-Type': 'image/jpeg' });
       return res.end(data);
     }
 
+    // PUT
     if (req.method === 'PUT') {
       let body = [];
 
@@ -49,12 +52,14 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    // DELETE
     if (req.method === 'DELETE') {
       await fs.promises.unlink(filePath);
       res.statusCode = 200;
       return res.end('Deleted');
     }
 
+    // інші методи
     res.statusCode = 405;
     res.end('Method Not Allowed');
 
