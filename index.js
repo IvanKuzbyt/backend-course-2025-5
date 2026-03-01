@@ -15,13 +15,53 @@ const cacheDir = options.cache;
 
 if (!fs.existsSync(cacheDir)) {
   fs.mkdirSync(cacheDir, { recursive: true });
-  console.log('Cache directory created');
 }
 
-const server = http.createServer((req, res) => {
-  res.statusCode = 200;
-  res.setHeader('Content-Type', 'text/plain');
-  res.end('Proxy server is running');
+const server = http.createServer(async (req, res) => {
+  const code = req.url.slice(1);
+  const filePath = path.join(cacheDir, `${code}.jpg`);
+
+  if (!code) {
+    res.statusCode = 400;
+    return res.end('Bad Request');
+  }
+
+  try {
+
+    if (req.method === 'GET') {
+      const data = await fs.promises.readFile(filePath);
+      res.writeHead(200, { 'Content-Type': 'image/jpeg' });
+      return res.end(data);
+    }
+
+    if (req.method === 'PUT') {
+      let body = [];
+
+      req.on('data', chunk => body.push(chunk));
+
+      req.on('end', async () => {
+        const buffer = Buffer.concat(body);
+        await fs.promises.writeFile(filePath, buffer);
+        res.statusCode = 201;
+        res.end('Created');
+      });
+
+      return;
+    }
+
+    if (req.method === 'DELETE') {
+      await fs.promises.unlink(filePath);
+      res.statusCode = 200;
+      return res.end('Deleted');
+    }
+
+    res.statusCode = 405;
+    res.end('Method Not Allowed');
+
+  } catch (err) {
+    res.statusCode = 404;
+    res.end('Not Found');
+  }
 });
 
 server.listen(options.port, options.host, () => {
